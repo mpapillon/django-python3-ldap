@@ -16,8 +16,9 @@ class LazySetting(object):
         self.name = name
         self.default = default
 
-    def parse_ldap_url(self, all_settings):
-        url = urllib.parse.urlparse(all_settings.LDAP_URL)
+    @classmethod
+    def _parse_ldap_url(cls, django_settings):
+        url = urllib.parse.urlparse(django_settings.LDAP_URL)
 
         # Remove query strings.
         path = url.path[1:]
@@ -25,21 +26,23 @@ class LazySetting(object):
 
         auth_url = 'ldap://%s:%s' % (url.hostname, url.port)
 
-        config = {
+        return {
             'LDAP_AUTH_URL': auth_url,
-            'LDAP_AUTH_CONNECTION_USERNAME': url.username,
-            'LDAP_AUTH_CONNECTION_PASSWORD': url.password,
+            'LDAP_AUTH_CONNECTION_USERNAME': url.username if url.username else '',
+            'LDAP_AUTH_CONNECTION_PASSWORD': url.password if url.password else '',
             'LDAP_AUTH_SEARCH_BASE': path,
             'LDAP_AUTH_USE_TLS': url.scheme == "ldaps"
         }
 
-        vars(all_settings).update(config)
-
     def __get__(self, obj, cls):
         if obj is None:
             return self
-        self.parse_ldap_url(obj._settings)
-        return getattr(obj._settings, self.name, self.default)
+
+        try:
+            return getattr(obj._settings, self.name)
+        except AttributeError:
+            value = self._parse_ldap_url(obj._settings).get(self.name)
+            return value if value else self.default
 
 
 class LazySettings(object):
@@ -53,6 +56,11 @@ class LazySettings(object):
 
     def __init__(self, settings):
         self._settings = settings
+
+    LDAP_URL = LazySetting(
+        name="LDAP_URL",
+        default="ldap://localhost:389",
+    )
 
     LDAP_AUTH_URL = LazySetting(
         name="LDAP_AUTH_URL",
