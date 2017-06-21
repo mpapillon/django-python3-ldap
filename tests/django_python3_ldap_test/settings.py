@@ -29,9 +29,7 @@ ALLOWED_HOSTS = []
 
 # LDAP auth settings.
 
-LDAP_AUTH_URL = os.environ.get("LDAP_AUTH_URL", "ldap://localhost:389")
-
-LDAP_AUTH_SEARCH_BASE = os.environ.get("LDAP_AUTH_SEARCH_BASE", "")
+LDAP_URL = os.environ.get("LDAP_URL", "ldap://localhost:389")
 
 AUTHENTICATION_BACKENDS = (
     "django_python3_ldap.auth.LDAPBackend",
